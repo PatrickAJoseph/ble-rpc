@@ -1,0 +1,6 @@
+*.hex
+*.out
+*.xml
+*.opt
+*.d
+*.o

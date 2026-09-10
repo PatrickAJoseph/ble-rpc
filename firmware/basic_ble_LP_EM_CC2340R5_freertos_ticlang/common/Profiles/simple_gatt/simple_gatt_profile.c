@@ -57,6 +57,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ti/ble/app_util/framework/bleapputil_api.h"
 #include <ti/posix/ticlang/semaphore.h>
 
+#include "rpc.h"
+
 /*********************************************************************
 
 * MACROS
@@ -73,6 +75,8 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 extern sem_t rcpCommandReceivedSem;
+
+extern struct rpc rpc;
 
 void SimpleGattProfile_callback( uint8 paramID  );
 void SimpleGattProfile_invokeFromFWContext( char *pData );
@@ -97,9 +101,6 @@ GATT_BT_UUID(simpleGattProfile_char2UUID, SIMPLEGATTPROFILE_CHAR2_UUID);
 
 // Characteristic 3 UUID: 0xFFF3
 GATT_BT_UUID(simpleGattProfile_char3UUID, SIMPLEGATTPROFILE_CHAR3_UUID);
-
-// Characteristic 4 UUID: 0xFFF4
-GATT_BT_UUID(simpleGattProfile_char4UUID, SIMPLEGATTPROFILE_CHAR4_UUID);
 
 // Characteristic 5 UUID: 0xFFF5
 GATT_BT_UUID(simpleGattProfile_char5UUID, SIMPLEGATTPROFILE_CHAR5_UUID);
@@ -165,22 +166,6 @@ static uint8 simpleGattProfile_Char3 = 0;
 
 // Simple GATT Profile Characteristic 3 User Description
 static uint8 simpleGattProfile_Char3UserDesp[17] = "Characteristic 3";
-
-// Simple GATT Profile Characteristic 4 Properties
-static uint8 simpleGattProfile_Char4Props = GATT_PROP_NOTIFY;
-
-// Characteristic 4 Value
-static uint8 simpleGattProfile_Char4 = 0;
-
-// Simple GATT Profile Characteristic 4 Configuration Each client has its own
-// instantiation of the Client Characteristic Configuration. Reads of the
-// Client Characteristic Configuration only shows the configuration for
-// that client and writes only affect the configuration of that client.
-
-static gattCharCfg_t *simpleGattProfile_Char4Config;
-
-// Simple GATT Profile Characteristic 4 User Description
-static uint8 simpleGattProfile_Char4UserDesp[17] = "Characteristic 4";
 
 // Simple GATT Profile Characteristic 5 Properties
 static uint8 simpleGattProfile_Char5Props = GATT_PROP_READ;
@@ -268,15 +253,6 @@ static gattAttribute_t simpleGattProfile_attrTbl[] =
   // Characteristic 3 User Description
   GATT_BT_ATT( charUserDescUUID,             GATT_PERMIT_READ,                      simpleGattProfile_Char3UserDesp ),
 
-  // Characteristic 4 Declaration
-  GATT_BT_ATT( characterUUID,                GATT_PERMIT_READ,                      &simpleGattProfile_Char4Props ),
-  // Characteristic Value 4
-  GATT_BT_ATT( simpleGattProfile_char4UUID,  0,                                     &simpleGattProfile_Char4 ),
-  // Characteristic 4 configuration
-  GATT_BT_ATT( clientCharCfgUUID,            GATT_PERMIT_READ | GATT_PERMIT_WRITE,  (uint8 *) &simpleGattProfile_Char4Config ),
-  // Characteristic 4 User Description
-  GATT_BT_ATT( charUserDescUUID,             GATT_PERMIT_READ,                      simpleGattProfile_Char4UserDesp ),
-
   // Characteristic 5 Declaration
   GATT_BT_ATT( characterUUID,                GATT_PERMIT_READ,                      &simpleGattProfile_Char5Props ),
   // Characteristic Value 5
@@ -292,13 +268,13 @@ static gattAttribute_t simpleGattProfile_attrTbl[] =
   // Client server profile: response declaration.
   GATT_BT_ATT( characterUUID, GATT_PERMIT_READ, &rpcProfile_responseProps ),
   GATT_BT_ATT( rpcProfile_responseUUID, GATT_PERMIT_READ, rpcProfile_response ),
-  GATT_BT_ATT( clientCharCfgUUID, 0, (uint8_t*)&rpcProfile_responseCharConfig ),
+  GATT_BT_ATT( clientCharCfgUUID, GATT_PERMIT_READ | GATT_PERMIT_WRITE , (uint8_t*)&rpcProfile_responseCharConfig ),
   GATT_BT_ATT( charUserDescUUID, GATT_PERMIT_READ, rpcProfile_responseDesc ),
 
   // Client server profile: notifiation declaration.
   GATT_BT_ATT( characterUUID, GATT_PERMIT_READ, &rpcProfile_notificationProps ),
   GATT_BT_ATT( rpcProfile_notificationUUID, GATT_PERMIT_READ, rpcProfile_notification ),
-  GATT_BT_ATT( clientCharCfgUUID, 0, (uint8_t*)&rpcProfile_notificationCharConfig ),
+  GATT_BT_ATT( clientCharCfgUUID, GATT_PERMIT_READ | GATT_PERMIT_WRITE , (uint8_t*)&rpcProfile_notificationCharConfig ),
   GATT_BT_ATT( charUserDescUUID, GATT_PERMIT_READ, rpcProfile_notificationDesc ),
 };
 
@@ -355,15 +331,6 @@ bStatus_t SimpleGattProfile_addService( void )
   uint8 status = SUCCESS;
   // Allocate Client Characteristic Configuration table
 
-  simpleGattProfile_Char4Config = (gattCharCfg_t *)ICall_malloc( sizeof( gattCharCfg_t ) *
-
-                                                                 MAX_NUM_BLE_CONNS );
-
-  if( simpleGattProfile_Char4Config == NULL )
-  {
-    return ( bleMemAllocError );
-  }
-
   rpcProfile_responseCharConfig = (gattCharCfg_t*)ICall_malloc( sizeof(gattCharCfg_t) * MAX_NUM_BLE_CONNS);
 
   if(rpcProfile_responseCharConfig == NULL)
@@ -379,7 +346,7 @@ bStatus_t SimpleGattProfile_addService( void )
   }
 
   // Initialize Client Characteristic Configuration attributes
-  GATTServApp_InitCharCfg( LINKDB_CONNHANDLE_INVALID, simpleGattProfile_Char4Config );
+
   GATTServApp_InitCharCfg( LINKDB_CONNHANDLE_INVALID, rpcProfile_responseCharConfig );
   GATTServApp_InitCharCfg( LINKDB_CONNHANDLE_INVALID, rpcProfile_notificationCharConfig );
 
@@ -473,21 +440,6 @@ bStatus_t SimpleGattProfile_setParameter( uint8 param, uint8 len, void *value )
       }
       break;
 
-    case SIMPLEGATTPROFILE_CHAR4:
-      if( len == sizeof ( uint8 ) )
-      {
-        simpleGattProfile_Char4 = *((uint8*)value);
-        // See if Notification has been enabled
-        GATTServApp_ProcessCharCfg( simpleGattProfile_Char4Config, &simpleGattProfile_Char4, FALSE,
-                                    simpleGattProfile_attrTbl, GATT_NUM_ATTRS( simpleGattProfile_attrTbl ),
-                                    INVALID_TASK_ID, SimpleGattProfile_readAttrCB );
-      }
-      else
-      {
-        status = bleInvalidRange;
-      }
-      break;
-
     case SIMPLEGATTPROFILE_CHAR5:
       if( len == SIMPLEGATTPROFILE_CHAR5_LEN )
       {
@@ -547,10 +499,6 @@ bStatus_t SimpleGattProfile_getParameter( uint8 param, void *value )
 
     case SIMPLEGATTPROFILE_CHAR3:
       *((uint8*)value) = simpleGattProfile_Char3;
-      break;
-
-    case SIMPLEGATTPROFILE_CHAR4:
-      *((uint8*)value) = simpleGattProfile_Char4;
       break;
 
     case SIMPLEGATTPROFILE_CHAR5:
@@ -623,25 +571,31 @@ bStatus_t SimpleGattProfile_readAttrCB(uint16_t connHandle,
 
       case SIMPLEGATTPROFILE_CHAR1_UUID:
       case SIMPLEGATTPROFILE_CHAR2_UUID:
-      case SIMPLEGATTPROFILE_CHAR4_UUID:
-        *pLen = 1;
-          pValue[0] = *pAttr->pValue;
-        break;
   
       case RPC_RESPONSE_UUID:
       {
-        //*pLen = RPC_MAX_PACKET_LENGTH;
-        //memcpy( pValue, rpcProfile_response, RPC_MAX_PACKET_LENGTH );
+        *pLen = (rpc.response_length + 2);
+        pValue[0] = rpc.response_id;
+        pValue[1] = rpc.response_length;
 
-        *pLen = 1;
-        pValue[0] = rpcProfile_response[0];
+        memcpy( &pValue[2], rpc.response, rpc.response_length );
+
+        //*pLen = 1;
+        //pValue[0] = rpcProfile_response[0];
       }
       break;
   
       case RPC_NOTIFICATION_UUID:
       {
-        //*pLen = RPC_MAX_PACKET_LENGTH;
-        //memcpy( pValue, rpcProfile_notification, RPC_MAX_PACKET_LENGTH );
+        *pLen = (rpc.notification_length + 2);
+        pValue[0] = rpc.notification_id;
+        pValue[1] = rpc.notification_length;
+        rpc.notification = &rpcProfile_notification[2];
+
+        memcpy( &pValue[2], rpc.notification, rpc.notification_length );
+
+        //*pLen = 1;
+        //pValue[0] = rpcProfile_response[0];
       }
       break;
 
@@ -688,6 +642,7 @@ bStatus_t SimpleGattProfile_readAttrCB(uint16_t connHandle,
  */
 
 uint16_t writeUUID = 0;
+uint16_t cccdStatus = 0xFFFF;
 
 bStatus_t SimpleGattProfile_writeAttrCB( uint16_t connHandle,
                                      gattAttribute_t *pAttr,
@@ -747,14 +702,21 @@ bStatus_t SimpleGattProfile_writeAttrCB( uint16_t connHandle,
         extern int rcpCommandCount;
 
         rcpCommandCount++;
-        sem_post( &rcpCommandReceivedSem );
+        
+        rpc.command_id = rpcProfile_command[0];
+        rpc.command_length = rpcProfile_command[1];
+        rpc.command = &(((uint8_t*)rpcProfile_command)[2]);
+
+        sem_post(&rpc.commandReceivedSem);
       break;
 
       case GATT_CLIENT_CHAR_CFG_UUID:
         status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
                                                  offset, GATT_CLIENT_CFG_NOTIFY );
         //notify the App that a change has occurred in Char 4
-        notifyApp = SIMPLEGATTPROFILE_CHAR4;
+
+        cccdStatus = GATTServApp_ReadCharCfg( connHandle, rpcProfile_responseCharConfig );
+
         break;
 
       default:
@@ -824,13 +786,17 @@ void SimpleGattProfile_invokeFromFWContext( char *pData )
   simpleGattProfile_appCBs->pfnSimpleGattProfile_Change(pData[0]);
 }
 
-bStatus_t RPC_sendNotification(uint8_t id, uint8_t* data, size_t length)
+bStatus_t __RPC_sendNotification(uint8_t id, uint8_t* data, size_t length)
 {
   memset( rpcProfile_notification, 0, RPC_MAX_PACKET_LENGTH );
 
   rpcProfile_notification[0] = id;
+  rpcProfile_notification[1] = (uint8_t)length;
 
-  memcpy( &rpcProfile_notification[1], data, length );
+  rpc.notification_id = id;
+  rpc.notification_length = length;
+
+  memcpy( &rpcProfile_notification[2], data, length );
 
     return GATTServApp_ProcessCharCfg(
         rpcProfile_notificationCharConfig,
@@ -845,15 +811,16 @@ bStatus_t RPC_sendNotification(uint8_t id, uint8_t* data, size_t length)
 
 uint8_t __counter;
 
-bStatus_t RPC_sendResponse(uint8_t id, uint8_t* data, size_t length)
+bStatus_t __RPC_sendResponse(uint8_t id, uint8_t* data, size_t length)
 {
   __counter++;
 
   memset( rpcProfile_response, 0, RPC_MAX_PACKET_LENGTH );
 
   rpcProfile_response[0] = id;
+  rpcProfile_response[1] = (uint8_t)length;
 
-  memcpy( &rpcProfile_response[1], data, length );
+  memcpy( &rpcProfile_response[2], data, length );
 
     return GATTServApp_ProcessCharCfg(
         rpcProfile_responseCharConfig,
@@ -863,8 +830,7 @@ bStatus_t RPC_sendResponse(uint8_t id, uint8_t* data, size_t length)
         GATT_NUM_ATTRS(simpleGattProfile_attrTbl),
         INVALID_TASK_ID,
         SimpleGattProfile_readAttrCB
-    );
-    
+    );    
 }
 
 

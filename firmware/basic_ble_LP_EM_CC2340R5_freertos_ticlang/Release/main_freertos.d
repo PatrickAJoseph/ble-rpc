@@ -39,6 +39,7 @@ main_freertos.o: ../main_freertos.c \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/health_toolkit/assert.h \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/comdef.h \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/bcomdef.h \
+ ../rpc.h \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/app_util/config/ble_user_config.h \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/controller/ll/ll_user_config.h \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/drivers/rcl/LRF.h \
@@ -154,6 +155,7 @@ C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/icall/app/i
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/health_toolkit/assert.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/comdef.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/bcomdef.h:
+../rpc.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/app_util/config/ble_user_config.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/controller/ll/ll_user_config.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/drivers/rcl/LRF.h:

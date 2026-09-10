@@ -5,6 +5,7 @@
 "./syscfg/ti_freertos_config.o"
 "./syscfg/ti_freertos_portable_config.o"
 "./main_freertos.o"
+"./rpc.o"
 "./HealthToolkit/ble_sys_stat.o"
 "./HealthToolkit/debugInfo.o"
 "./app/Profiles/app_dev_info.o"

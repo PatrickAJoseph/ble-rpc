@@ -105,7 +105,8 @@ common/Profiles/simple_gatt/simple_gatt_profile.o: \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/sys/_internal.h \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/time.h \
  C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/signal.h \
- C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/sys/types.h
+ C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/sys/types.h \
+ F:/content_writing/ble-rpc/firmware/basic_ble_LP_EM_CC2340R5_freertos_ticlang/rpc.h
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/icall/app/icall.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/health_toolkit/assert.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/ble/stack_util/comdef.h:
@@ -210,3 +211,4 @@ C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/sys/_interna
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/time.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/signal.h:
 C:/ti/simplelink_lowpower_f3_sdk_9_14_01_16/source/ti/posix/ticlang/sys/types.h:
+F:/content_writing/ble-rpc/firmware/basic_ble_LP_EM_CC2340R5_freertos_ticlang/rpc.h:

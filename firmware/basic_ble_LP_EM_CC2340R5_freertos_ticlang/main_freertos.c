@@ -64,12 +64,50 @@
 #include "ti/ble/stack_util/health_toolkit/assert.h"
 #include "ti/ble/stack_util/bcomdef.h"
 
+#include "rpc.h"
+
 #ifndef USE_DEFAULT_USER_CFG
 #include "ti/ble/app_util/config/ble_user_config.h"
 // BLE user defined configuration
 icall_userCfg_t user0Cfg = BLE_USER_CFG;
 #endif // USE_DEFAULT_USER_CFG
 
+
+struct rpc rpc;
+
+volatile uint32_t ping_counter = 0;
+
+RPC_CALLBACK_DEFINE(ping_device)
+{
+    uint8_t* payload = data;
+    uint8_t* response = rpc.response;
+    bool ping;
+
+    ping = (bool)(payload[0] == 1);
+
+    if(ping)
+    {
+        ping_counter++;
+    }
+
+    response[0] = (ping_counter >> 24) & 255;
+    response[1] = (ping_counter >> 16) & 255;
+    response[2] = (ping_counter >> 8) & 255;
+    response[3] = (ping_counter) & 255;
+    
+    if(ping_counter % 3 == 0)
+    {
+        RPC_sendNotification(&rpc, 1, response, 4);
+    }
+
+    rpc.response_length = 4;
+}
+
+RPC_CALLBACK_TABLE_DEFINE(test_rcp_callbacks)
+{
+    RPC_CALLBACK_ENTRY( 0x00, ping_device ),
+    RPC_CALLBACK_ENTRY_END,
+};
 
 /*******************************************************************************
  * MACROS
@@ -131,15 +169,29 @@ int rcpCommandCount;
 
 void* rcpThread(void* args)
 {
+    ICall_EntityID selfEntity;
+    ICall_SyncHandle syncEvent;
+
+    ICall_Errno err;
+
+    err = ICall_registerApp(&selfEntity, &syncEvent);
+
+    if (err != ICALL_ERRNO_SUCCESS)
+    {
+        /* handle failure */
+        while (1);
+    }
+
     while(1)
     {
-        //sem_wait(&rcpCommandReceivedSem);
-        RPC_sendResponse(10, response, 4);
-        //rcpCommandExecutionCount++;
-        //rcpCommandCount--;
-        usleep(100000);
+        RPC_waitForCommand(&rpc);
+        RPC_processCommands(&rpc);
+        rcpCommandExecutionCount++;
+        rcpCommandCount--;
     }
 }
+
+uint8_t rcp_response_buffer[256];
 
 int main()
 {
@@ -147,7 +199,9 @@ int main()
   halAssertCback = AssertHandler;
   RegisterAssertCback(AssertHandler);
 
-  sem_init(&rcpCommandReceivedSem, 0, 0);
+  RPC_init(&rpc, test_rcp_callbacks);
+
+  rpc.response = rcp_response_buffer;
 
   Board_init();
 
