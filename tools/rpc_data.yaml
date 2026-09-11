@@ -1,0 +1,35 @@
+commands:
+  - id: 0x00
+    name: ping_device_1
+    
+    request_parameters:
+      - name: ping
+        type: uint8
+        is_a_list: false
+      
+    response_parameters:
+      - name: ping_count
+        type: uint32
+        is_a_list: false
+
+  - id: 0x01
+    name: ping_device_2
+    
+    request_parameters:
+      - name: ping
+        type: uint8
+        is_a_list: false
+      
+    response_parameters:
+      - name: ping_count
+        type: uint32
+        is_a_list: false
+
+notifications:
+  - id: 0x00
+    name: ping_notification
+    
+    notification_parameters:
+      - name: ping_count
+        type: uint32
+        is_a_list: false
